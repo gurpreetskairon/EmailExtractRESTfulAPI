@@ -28,9 +28,9 @@ namespace EmailExtractRESTfulAPI.Controllers
             // create a regex object of the pattern and convert the occurances to an array
             Regex rg = new Regex(pattern);
             var matchedTags = rg.Matches(emailText).Cast<Match>().Select(m => m.Value).ToArray();
-            
-            // dictionary of tag names with their occurance count
-            Dictionary<string, int> dictTags = new Dictionary<string, int>();
+
+            Stack<string> tags = new Stack<string>(); 
+
 
             // iterate each tag found and add it to the dictionary. If it already exists, increment the count, else add it with count as 1 
             foreach (string tag in matchedTags)
@@ -38,21 +38,19 @@ namespace EmailExtractRESTfulAPI.Controllers
                 // remove the forward slash in the closing tags
                 string tagName = tag.Replace("/", "");
 
-                if (dictTags.ContainsKey(tagName))
-                    dictTags[tagName] = dictTags[tagName] + 1;
+                if (tags.Count() == 0)
+                    tags.Push(tagName);
+                else if (tags.Peek() == tagName)
+                    tags.Pop();
                 else
-                    dictTags.Add(tagName, 1);      
+                    tags.Push(tagName);
             }
 
-            // iterate through the dictionary. if the count of tags is other than 2, set the status code to bad request and display appropriate message to user
-            foreach (string tagName in dictTags.Keys)
-            {
-                if (dictTags[tagName] != 2)
-                    return Request.CreateResponse(HttpStatusCode.BadRequest, $"This is not well formed XML content. {tagName} does not have a closing tag");
-            }
+            if (tags.Count() != 0)
+                return Request.CreateResponse(HttpStatusCode.BadRequest, "The text provided is not a well-formed XML. It has missing closing tags.");
 
             #endregion
-            
+
             #region Get the Cost Centre Value
             string costCentreValue = "UNKNOWN";
 
